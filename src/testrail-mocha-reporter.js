@@ -13,30 +13,25 @@ function titleToCaseIds(title) {
   return caseIds;
 }
 
-function done(results, testrail, options, failures, exit) {
-  if (!results) {
-    console.log("No results found");
-    return;
+async function done(results, testrail, options, failures, exit) {
+  try {
+    if (results.length === 0) {
+      console.log("No results found");
+      return;
+    }
+    const runId = await testrail.getRunIdTestCase(results[0].case_id);
+    await testrail.addResults(runId, results);
+    console.log("DONE");
+    exit && exit(failures > 0 ? 1 : 0);
+  } catch (error) {
+    console.log(error);
+    exit(1);
   }
-  testrail.getRunIdTestCase(results[0].case_id).then((runId) => {
-    testrail
-      .addResults(runId, results)
-      .then(() => {})
-      .catch((err) => {
-        console.log(err);
-        exit(1);
-      })
-      .then(() => {
-        exit(failures > 0 ? 1 : 0);
-        process.exit(failures > 0 ? 1 : 0);
-      });
-  });
 }
 
 function testrailReporter(runner, options) {
   this.results = [];
-  this.failures = 0;
-  failures = 0;
+  this.testFailures = 0;
   // Ensure stats collector has been initialized
   if (!runner.stats) {
     const createStatsCollector = require("mocha/lib/stats-collector");
@@ -52,8 +47,8 @@ function testrailReporter(runner, options) {
 
   // Done function will be called before mocha exits
   // This is where we will save JSON and generate the HTML report
-  this.done = (failures, exit) =>
-    done(this.results, testrail, reporterOptions, this.failures, exit);
+  this.done = (exit) =>
+    done(this.results, testrail, reporterOptions, this.testFailures, exit);
 
   // Call the Base mocha reporter
   Base.call(this, runner);
@@ -75,7 +70,6 @@ function testrailReporter(runner, options) {
   });
 
   runner.on("fail", (test) => {
-    this.failures++;
     const caseIds = titleToCaseIds(test.title);
     if (caseIds.length > 0) {
       const results = caseIds.map((caseId) => {
@@ -96,12 +90,15 @@ function testrailReporter(runner, options) {
         // end gets called more than once for some reason
         // so we ensure the suite is processed only once
         endCalled = true;
+
+        const { failures } = this.stats;
+        this.testFailures = failures;
       }
     } catch (e) {
       // required because thrown errors are not handled directly in the
       // event emitter pattern and mocha does not have an "on error"
       /* istanbul ignore next */
-      log(`Problem with mochawesome: ${e.stack}`, "error");
+      console.log(`Problem with testrail reporter: ${e.stack}`, "error");
     }
   });
 }
