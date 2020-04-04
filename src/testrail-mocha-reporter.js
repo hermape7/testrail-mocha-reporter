@@ -1,4 +1,5 @@
 const Base = require("mocha/lib/reporters/base");
+const TestrailClass = require("./testrail");
 
 function titleToCaseIds(title) {
   let caseIds = [];
