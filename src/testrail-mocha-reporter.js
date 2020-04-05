@@ -16,22 +16,22 @@ function titleToCaseIds(title) {
 async function done(results, testrail, options, failures, exit) {
   try {
     if (results.length === 0) {
-      console.log("No results found");
-      return;
+      console.log(`No results found.`);
+      exit && exit(0);
+    } else {
+      const runId = await testrail.getRunIdTestCase(results[0].case_id);
+      await testrail.addResults(runId, results);
+      console.log("DONE");
+      exit && exit(failures > 0 ? 1 : 0);
     }
-    const runId = await testrail.getRunIdTestCase(results[0].case_id);
-    await testrail.addResults(runId, results);
-    console.log("DONE");
-    exit && exit(failures > 0 ? 1 : 0);
   } catch (error) {
     console.log(error);
-    exit(1);
+    exit && exit(failures > 0 ? 1 : 0);
   }
 }
 
 function testrailReporter(runner, options) {
   this.results = [];
-  this.testFailures = 0;
   // Ensure stats collector has been initialized
   if (!runner.stats) {
     const createStatsCollector = require("mocha/lib/stats-collector");
@@ -47,8 +47,8 @@ function testrailReporter(runner, options) {
 
   // Done function will be called before mocha exits
   // This is where we will save JSON and generate the HTML report
-  this.done = (exit) =>
-    done(this.results, testrail, reporterOptions, this.testFailures, exit);
+  this.done = (failures, exit) =>
+    done(this.results, testrail, reporterOptions, failures, exit);
 
   // Call the Base mocha reporter
   Base.call(this, runner);
@@ -66,6 +66,10 @@ function testrailReporter(runner, options) {
         };
       });
       this.results.push(...results);
+    } else {
+      console.log(
+        `No test case found. Please check naming of the test - must include (C|T)xxxx`
+      );
     }
   });
 
@@ -80,6 +84,10 @@ function testrailReporter(runner, options) {
         };
       });
       this.results.push(...results);
+    } else {
+      console.log(
+        `No test case found. Please check naming of the test - must include (C|T)xxxx`
+      );
     }
   });
 
@@ -92,7 +100,7 @@ function testrailReporter(runner, options) {
         endCalled = true;
 
         const { failures } = this.stats;
-        this.testFailures = failures;
+        this.failures = failures;
       }
     } catch (e) {
       // required because thrown errors are not handled directly in the

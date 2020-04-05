@@ -60,10 +60,16 @@ class TestrailClass {
   }
 
   async addResults(runId, results) {
-    return await this.testrail.addResultsForCases(
-      runId,
-      results ? results : {}
-    );
+    try {
+      return await this.testrail.addResultsForCases(
+        runId,
+        results ? results : {}
+      );
+    } catch (err) {
+      console.log(
+        `Run with ID ${runId} is not valid run. (Run needs to be created and not closed)`
+      );
+    }
   }
 }
 
