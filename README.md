@@ -1,3 +1,6 @@
+[![npm version](https://badge.fury.io/js/testrail-mocha-reporter.svg)](https://www.npmjs.com/package/testrail-mocha-reporter)
+[![NPM Downloads](https://img.shields.io/npm/dt/testrail-mocha-reporter.svg?style=flat)]()
+
 # testrail-mocha-reporter
 
 This is custom mocha reporter for use with javascript framework, [mocha](https://mochajs.org/).
