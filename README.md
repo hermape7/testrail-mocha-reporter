@@ -1,3 +1,4 @@
+![GitHub package.json version](https://img.shields.io/github/package-json/v/hermape7/testrail-mocha-reporter?color=blue)
 [![npm version](https://badge.fury.io/js/testrail-mocha-reporter.svg)](https://www.npmjs.com/package/testrail-mocha-reporter)
 [![NPM Downloads](https://img.shields.io/npm/dt/testrail-mocha-reporter.svg?style=flat)]()
 
