@@ -124,7 +124,7 @@ You can read the whole TestRail documentation [here](http://docs.gurock.com/).
 
 ## Author
 
-Petr Heřmanský - [github](https://github.com/mickosav)
+Petr Heřmanský - [github](https://github.com/hermape7)
 
 ## License
 
