@@ -1,3 +1,8 @@
+const stringify = require("json-stringify-safe");
+const chalk = require("chalk");
+
+const LOG_LEVELS = ["info", "warning", "debug", "error"];
+
 function titleToCaseIds(title) {
   let caseIds = [];
 
@@ -10,4 +15,9 @@ function titleToCaseIds(title) {
   return caseIds;
 }
 
-module.exports = { titleToCaseIds };
+function logger(msg) {
+  let msgOut = typeof msg === Object ? stringify(msg, null, 2) : msg;
+  console.log(`[${chalk.cyan("testrail")}] ${msgOut}`);
+}
+
+module.exports = { titleToCaseIds, logger };
