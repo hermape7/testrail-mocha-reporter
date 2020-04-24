@@ -5,37 +5,32 @@ const {
   EVENT_TEST_FAIL,
   EVENT_TEST_PASS,
 } = Mocha.Runner.constants;
-const { titleToCaseIds } = require("./utils");
-const getenv = require("getenv");
+const { titleToCaseIds, logger } = require("./utils");
+// const getenv = require("getenv");
+
+function consoleReporter(reporter) {
+  if (reporter) {
+    try {
+      // eslint-disable-next-line import/no-dynamic-require
+      return require(`mocha/lib/reporters/${reporter}`);
+    } catch (e) {
+      log(`Unknown console reporter '${reporter}', defaulting to spec`);
+    }
+  }
+
+  return require("mocha/lib/reporters/spec");
+}
 
 async function done(results, testrail, options, failures, exit) {
-  let runId = 0;
   try {
     if (results.length === 0) {
-      console.log(`No results found.`);
-      exit && exit(0);
-    } else {
-      if (options.planId !== "") {
-        runId = await testrail.getRunIdTestCase(results[0].case_id);
-      } else {
-        if (options.runId !== "") {
-          runId = options.runId;
-        } else {
-          runId = await testrail.createNewRun();
-        }
-      }
-      if (runId === 0) {
-        console.log("RunId cannot be 0");
-        exit && exit(0);
-      }
-      await testrail.addResults(runId, results);
-      if (options.createRun || options.createRun === "true") {
-        await testrail.closeRun(runId);
-      }
+      logger(`No results found.`);
       exit && exit(failures > 0 ? 1 : 0);
+    } else {
+      await testrail.sendResults(results, failures, exit);
     }
   } catch (error) {
-    console.log(error);
+    logger(error);
     exit && exit(failures > 0 ? 1 : 0);
   }
 }
@@ -43,40 +38,6 @@ async function done(results, testrail, options, failures, exit) {
 function getReporterOptions(reporterOptions) {
   return {
     ...reporterOptions,
-    domain: reporterOptions.domain
-      ? reporterOptions.domain
-      : getenv("TESTRAIL_DOMAIN", ""),
-    username: reporterOptions.username
-      ? reporterOptions.username
-      : getenv("TESTRAIL_USERNAME", ""),
-    password: reporterOptions.password
-      ? reporterOptions.password
-      : getenv("TESTRAIL_PASSWORD", ""),
-    projectId: reporterOptions.projectId
-      ? reporterOptions.projectId
-      : getenv("TESTRAIL_PROJECT_ID", ""),
-    milestoneId: reporterOptions.milestoneId
-      ? reporterOptions.milestoneId
-      : getenv("TESTRAIL_MILESTONE_ID", ""),
-    suiteId: reporterOptions.suiteId
-      ? reporterOptions.suiteId
-      : getenv("TESTRAIL_SUITE_ID", ""),
-    runId: reporterOptions.runId
-      ? reporterOptions.runId
-      : getenv("TESTRAIL_RUN_ID", ""),
-    planId: reporterOptions.planId
-      ? reporterOptions.planId
-      : getenv("TESTRAIL_PLAN_ID", ""),
-    runName: reporterOptions.runName
-      ? reporterOptions.runName
-      : getenv("TESTRAIL_RUN_NAME", ""),
-    createRun: reporterOptions.createRun
-      ? reporterOptions.createRun
-      : getenv("TESTRAIL_CREATE_RUN", false),
-    suiteIds: reporterOptions.suiteIds
-      ? suiteIds
-      : getenv("TESTRAIL_SUITE_IDS", []),
-    ci: reporterOptions.ci ? reporterOptions.ci : getenv("TESTRAIL_CI", ""),
   };
 }
 
@@ -91,28 +52,6 @@ function testrailReporter(runner, options) {
   // Reporter options
   let reporterOptions = getReporterOptions(options.reporterOptions);
 
-  if (reporterOptions.ci !== "") {
-    if (
-      reporterOptions.ci === "circle" ||
-      `${reporterOptions.ci}`.toUpperCase() === "CCI"
-    ) {
-      reporterOptions = {
-        ...reporterOptions,
-        runName: `${reporterOptions.runName} | #${process.env.CIRCLE_BUILD_NUM}`,
-      };
-    } else if (reporterOptions.ci === "travis") {
-      reporterOptions = {
-        ...reporterOptions,
-        runName: `${reporterOptions.runName} | #${process.env.TRAVIS_BUILD_NUMBER}`,
-      };
-    } else if (reporterOptions.ci === "jenkins") {
-      reporterOptions = {
-        ...reporterOptions,
-        runName: `${reporterOptions.runName} | #${process.env.BUILD_NUMBER}`,
-      };
-    }
-  }
-
   const testrail = new TestrailClass(reporterOptions);
 
   // Done function will be called before mocha exits
@@ -122,6 +61,12 @@ function testrailReporter(runner, options) {
 
   // Call the Base mocha reporter
   Mocha.reporters.Base.call(this, runner);
+
+  const reporterName = reporterOptions.consoleReporter;
+  if (reporterName !== "none") {
+    const ConsoleReporter = consoleReporter(reporterName);
+    new ConsoleReporter(runner); // eslint-disable-line
+  }
 
   let endCalled = false;
 
@@ -137,7 +82,7 @@ function testrailReporter(runner, options) {
       });
       this.results.push(...results);
     } else {
-      console.log(
+      logger(
         `No test case found. Please check naming of the test - must include (C|T)xxxx`
       );
     }
@@ -155,7 +100,7 @@ function testrailReporter(runner, options) {
       });
       this.results.push(...results);
     } else {
-      console.log(
+      logger(
         `No test case found. Please check naming of the test - must include (C|T)xxxx`
       );
     }
@@ -173,10 +118,7 @@ function testrailReporter(runner, options) {
         this.failures = failures;
       }
     } catch (e) {
-      // required because thrown errors are not handled directly in the
-      // event emitter pattern and mocha does not have an "on error"
-      /* istanbul ignore next */
-      console.log(`Problem with testrail reporter: ${e.stack}`, "error");
+      logger(`Problem with testrail reporter: ${e.stack}`);
     }
   });
 }

@@ -1,11 +1,93 @@
 const Testrail = require("testrail-api");
 const moment = require("moment");
 const _ = require("lodash");
+const { logger } = require("./utils");
+const getenv = require("getenv");
+const chalk = require("chalk");
+
+function addCiInfo(opts) {
+  let reporterOptions = opts;
+  if (
+    reporterOptions.ci === "circle" ||
+    `${reporterOptions.ci}`.toUpperCase() === "CCI"
+  ) {
+    reporterOptions = {
+      ...reporterOptions,
+      runName: `${reporterOptions.runName} | #${process.env.CIRCLE_BUILD_NUM}`,
+    };
+  } else if (reporterOptions.ci === "travis") {
+    reporterOptions = {
+      ...reporterOptions,
+      runName: `${reporterOptions.runName} | #${process.env.TRAVIS_BUILD_NUMBER}`,
+    };
+  } else if (reporterOptions.ci === "jenkins") {
+    reporterOptions = {
+      ...reporterOptions,
+      runName: `${reporterOptions.runName} | #${process.env.BUILD_NUMBER}`,
+    };
+  }
+  return reporterOptions;
+}
+
+function checkOpts(opts) {
+  return {
+    ...opts,
+    domain:
+      opts.domain !== undefined
+        ? opts.domain
+        : getenv("TESTRAIL_DOMAIN", "n/a"),
+    username:
+      opts.username !== undefined
+        ? opts.username
+        : getenv("TESTRAIL_USERNAME", "n/a"),
+    password:
+      opts.password !== undefined
+        ? opts.password
+        : getenv("TESTRAIL_PASSWORD", "n/a"),
+    projectId:
+      opts.projectId !== undefined
+        ? opts.projectId
+        : getenv("TESTRAIL_PROJECT_ID", "n/a"),
+    milestoneId:
+      opts.milestoneId !== undefined
+        ? opts.milestoneId
+        : getenv("TESTRAIL_MILESTONE_ID", "n/a"),
+    suiteId:
+      opts.suiteId !== undefined
+        ? opts.suiteId
+        : getenv("TESTRAIL_SUITE_ID", "n/a"),
+    runId:
+      opts.runId !== undefined ? opts.runId : getenv("TESTRAIL_RUN_ID", "n/a"),
+    planId:
+      opts.planId !== undefined
+        ? opts.planId
+        : getenv("TESTRAIL_PLAN_ID", "n/a"),
+    runName:
+      opts.runName !== undefined
+        ? opts.runName
+        : getenv("TESTRAIL_RUN_NAME", "n/a"),
+    createRun:
+      opts.createRun !== undefined
+        ? opts.createRun
+        : getenv("TESTRAIL_CREATE_RUN", false, "n/a"),
+    suiteIds:
+      opts.suiteIds !== undefined
+        ? suiteIds
+        : getenv("TESTRAIL_SUITE_IDS", "n/a"),
+    ci: opts.ci !== undefined ? opts.ci : getenv("TESTRAIL_CI", "n/a"),
+  };
+}
 
 class TestrailClass {
   constructor(opts) {
-    if (opts == null) {
-      throw new Error("Missing --reporter-options in mocha.opts");
+    if (Object.keys(opts).length === 0) {
+      logger("Missing --reporter-options in mocha.opts");
+      process.exit(1);
+    }
+    opts = checkOpts(opts);
+    this.validateOptions(opts);
+    if (opts.ci) {
+      addCiInfo(opts);
     }
     this.domain = opts.domain;
     this.username = opts.username;
@@ -18,7 +100,6 @@ class TestrailClass {
     this.suiteId = opts.suiteId;
     this.runName = opts.runName;
     this.suiteIds = opts.suiteIds;
-    this.validateOptions(opts);
     this.testrail = new Testrail({
       host: `https://${this.domain}`,
       user: this.username,
@@ -31,30 +112,33 @@ class TestrailClass {
     this.validateSingleOpt(options, "username");
     this.validateSingleOpt(options, "password");
     this.validateSingleOpt(options, "projectId");
-    if (this.milestoneId !== "") {
+    if (this.milestoneId !== "n/a") {
       this.validateSingleOpt(options, "milestoneId");
     }
-    if (this.planId !== "") {
+    if (this.planId !== "n/a") {
       this.validateSingleOpt(options, "planId");
+    } else if (this.runId !== "n/a") {
+      this.validateSingleOpt(options, "runId");
+      this.validateSingleOpt(options, "suiteId");
+    } else if (this.createRun !== "n/a") {
+      this.validateSingleOpt(options, "createRun");
+      this.validateSingleOpt(options, "runName");
+      this.validateSingleOpt(options, "suiteId");
     } else {
-      if (this.createRun === "true") {
-        this.validateSingleOpt(options, "createRun");
-        this.validateSingleOpt(options, "runName");
-        this.validateSingleOpt(options, "suiteId");
-      } else {
-        if (this.runId !== "") {
-          this.validateSingleOpt(options, "runId");
-          this.validateSingleOpt(options, "suiteId");
-        }
-      }
+      logger(
+        "Missing values in opts. There are three options:\n\t planId\n\t runId + suiteId\n\t createRun + runName + suiteId"
+      );
     }
   }
 
   validateSingleOpt(options, name) {
     if (options[name] == null) {
-      throw new Error(
-        `Missing ${name} value. Please update --reporter-options in mocha.opts`
+      logger(
+        `Missing ${chalk.red(
+          name.toUpperCase()
+        )} value. Please update --reporter-options in mocha.opts`
       );
+      process.exit(1);
     }
   }
 
@@ -71,21 +155,39 @@ class TestrailClass {
   }
 
   async getRunIdTestCase(caseId) {
-    const planResponse = await this.testrail.getPlan(this.planId);
-    const caseResponse = await this.testrail.getCase(caseId);
-    const tcSuiteId = _.get(caseResponse.body, "suite_id");
-    const planRunId = _.chain(
-      _.find(planResponse.body.entries, (e) => e.suite_id === tcSuiteId)
-    )
-      .get("runs")
-      .head()
-      .get("id")
-      .value();
-    return planRunId;
+    try {
+      const planResponse = await this.testrail.getPlan(this.planId);
+      try {
+        const caseResponse = await this.testrail.getCase(caseId);
+        const tcSuiteId = _.get(caseResponse.body, "suite_id");
+        const planRunId = _.chain(
+          _.find(planResponse.body.entries, (e) => e.suite_id === tcSuiteId)
+        )
+          .get("runs")
+          .head()
+          .get("id")
+          .value();
+        return planRunId;
+      } catch (error) {
+        logger(
+          `Error when trying to get ${chalk.red(
+            `testCase ${testCase}`
+          )} from TR api`
+        );
+        logger(`${error.stack}`);
+      }
+    } catch (error) {
+      logger(
+        `Error when trying to get testPlan with ${chalk.red(
+          `planId ${this.planId}`
+        )} from TR api`
+      );
+      logger(`${error.stack}`);
+    }
   }
 
   async createNewRun() {
-    console.log(
+    logger(
       `Creating run ${this.runName} - ${moment().format(
         "YYYY MMM DD, HH:MM:SS"
       )}`
@@ -101,35 +203,63 @@ class TestrailClass {
         milestone_id: this.milestoneId,
       };
     }
-    const addRunResponse = await this.testrail.addRun(
-      this.projectId,
-      createBody
-    );
-    console.log("Created run with ID ", addRunResponse.body.id);
-    return addRunResponse.body.id;
+    try {
+      const addRunResponse = await this.testrail.addRun(
+        this.projectId,
+        createBody
+      );
+      logger("Created run with ID ", addRunResponse.body.id);
+      return addRunResponse.body.id;
+    } catch (error) {
+      logger("Error when creating a test Run");
+      logger(`${error}`);
+      return 0;
+    }
   }
 
   async closeRun(runId) {
     try {
-      console.log(`Closing run with id ${runId}`);
+      logger(`Closing run with id ${runId}`);
       await this.testrail.closeRun(runId);
     } catch (error) {
-      console.log(`Could not close the run with id ${runId}`);
-      console.log(error.message.error);
+      logger(`Could not close the run with id ${runId}`);
     }
   }
 
   async addResults(runId, results) {
     try {
-      console.log(`Adding results to run with id ${runId}`);
+      logger(`Adding results to run with id ${runId}`);
       await this.testrail.addResultsForCases(runId, results ? results : {});
-      console.log(
+      logger(
         `Results published to https://${this.domain}/index.php?/runs/view/${runId}`
       );
     } catch (err) {
-      console.log(
+      logger(
         `Run with ID ${runId} is not valid run. (Run needs to be created and not closed)`
       );
+    }
+  }
+
+  async sendResults(results, failures, exit) {
+    let runId = 0;
+    if (this.planId !== "n/a") {
+      runId = await this.getRunIdTestCase(results[0].case_id);
+    } else {
+      if (this.runId !== "n/a") {
+        runId = this.runId;
+      } else {
+        runId = await this.createNewRun();
+      }
+    }
+    if (runId === "0" || runId === 0 || "n/a") {
+      logger("RunId cannot be 0");
+      exit && exit(failures > 0 ? 1 : 0);
+    } else {
+      await this.addResults(runId, results);
+      if (this.createRun || this.createRun === "true") {
+        await this.closeRun(runId);
+      }
+      exit && exit(failures > 0 ? 1 : 0);
     }
   }
 }
