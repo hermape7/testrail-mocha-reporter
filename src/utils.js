@@ -16,7 +16,7 @@ function titleToCaseIds(title) {
 }
 
 function logger(msg) {
-  let msgOut = typeof msg === Object ? stringify(msg, null, 2) : msg;
+  let msgOut = msg instanceof Object ? stringify(msg, null, 2) : msg;
   console.log(`[${chalk.cyan("testrail")}] ${msgOut}`);
 }
 

@@ -197,7 +197,7 @@ class TestrailClass {
       suite_id: this.suiteId,
       include_all: true,
     };
-    if (this.milestoneId !== undefined && this.milestoneId !== 0) {
+    if (this.milestoneId !== "n/a" && this.milestoneId !== 0) {
       createBody = {
         ...createBody,
         milestone_id: this.milestoneId,
@@ -208,11 +208,11 @@ class TestrailClass {
         this.projectId,
         createBody
       );
-      logger("Created run with ID ", addRunResponse.body.id);
+      logger(`Created run with ID ${addRunResponse.body.id}`);
       return addRunResponse.body.id;
     } catch (error) {
       logger("Error when creating a test Run");
-      logger(`${error}`);
+      logger(error);
       return 0;
     }
   }
@@ -229,14 +229,17 @@ class TestrailClass {
   async addResults(runId, results) {
     try {
       logger(`Adding results to run with id ${runId}`);
+      console.log(results);
       await this.testrail.addResultsForCases(runId, results ? results : {});
       logger(
         `Results published to https://${this.domain}/index.php?/runs/view/${runId}`
       );
     } catch (err) {
-      logger(
-        `Run with ID ${runId} is not valid run. (Run needs to be created and not closed)`
-      );
+      console.log(this);
+      throw new Error(`${err}`);
+      // logger(
+      //   `Run with ID ${runId} is not valid run. (Run needs to be created and not closed)`
+      // );
     }
   }
 
@@ -251,7 +254,7 @@ class TestrailClass {
         runId = await this.createNewRun();
       }
     }
-    if (runId === "0" || runId === 0 || "n/a") {
+    if (runId === "0" || runId === 0 || runId === "n/a") {
       logger("RunId cannot be 0");
       exit && exit(failures > 0 ? 1 : 0);
     } else {
