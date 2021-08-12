@@ -3,18 +3,19 @@ const Mocha = require("mocha");
 const { EVENT_RUN_END, EVENT_TEST_FAIL, EVENT_TEST_PASS } =
   Mocha.Runner.constants;
 const { titleToCaseIds, logger } = require("./utils");
+const getenv = require("getenv");
 
 require("dotenv").config();
 
 function getResultBody(test, caseId) {
   let comment = `Duration: ${test.duration}ms`;
-  if (process.env.TESTRAIL_CI) {
+  if (getenv.bool("CIRCLECI", false)) {
     comment = `
       ${comment}
-      Circle build URL - ${process.env.CIRCLE_BUILD_URL}
-      Circle Branch - ${process.env.CIRCLE_BRANCH}
-      Author - ${process.env.CIRCLE_USERNAME}
-      Github - ${process.env.CI_PULL_REQUEST}
+      Circle build URL - ${getenv("CIRCLE_BUILD_URL", "n/a")}
+      Circle Branch - ${getenv("CIRCLE_BRANCH", "n/a")}
+      Author - ${getenv("CIRCLE_USERNAME", "n/a")}
+      Github - ${getenv("CI_PULL_REQUEST", "n/a")}
     `;
   }
   return {
@@ -22,9 +23,7 @@ function getResultBody(test, caseId) {
     status_id: test.state === "passed" ? 1 : 5,
     comment,
     elapsed: test.duration,
-    version: process.env.TESTRAIL_RESULT_VERSION
-      ? process.env.TESTRAIL_RESULT_VERSION
-      : "n/a"
+    version: getenv("TESTRAIL_RESULT_VERSION", "n/a")
   };
 }
 

@@ -9,10 +9,7 @@ require("dotenv").config();
 
 function addCiInfo(opts) {
   let reporterOptions = opts;
-  if (
-    reporterOptions.ci === "circle" ||
-    `${reporterOptions.ci}`.toUpperCase() === "CCI"
-  ) {
+  if (getenv.bool("CIRCLECI", false)) {
     reporterOptions = {
       ...reporterOptions,
       runName: `${reporterOptions.runName} | #${process.env.CIRCLE_BUILD_NUM}`
