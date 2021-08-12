@@ -5,6 +5,8 @@ const { logger } = require("./utils");
 const getenv = require("getenv");
 const chalk = require("chalk");
 
+require("dotenv").config();
+
 function addCiInfo(opts) {
   let reporterOptions = opts;
   if (

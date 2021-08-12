@@ -1,6 +1,6 @@
 {
   "name": "testrail-mocha-reporter",
-  "version": "0.3.2",
+  "version": "0.4.2",
   "description": "Testrail reporter for Mocha.js",
   "scripts": {
     "lint": "eslint src test",
@@ -23,6 +23,7 @@
   ],
   "dependencies": {
     "chalk": "^4.0.0",
+    "dotenv": "^10.0.0",
     "getenv": "^1.0.0",
     "json-stringify-safe": "^5.0.1",
     "testrail-api": "^1.3.6"
