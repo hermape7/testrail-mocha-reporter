@@ -259,7 +259,7 @@ class TestrailClass {
       exit && exit(failures > 0 ? 1 : 0);
     } else {
       await this.addResults(runId, results);
-      if (this.createRun || this.createRun === "true") {
+      if (this.createRun === true || this.createRun === "true") {
         await this.closeRun(runId);
       }
       exit && exit(failures > 0 ? 1 : 0);
