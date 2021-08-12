@@ -1,10 +1,7 @@
 const TestrailClass = require("./testrail");
 const Mocha = require("mocha");
-const {
-  EVENT_RUN_END,
-  EVENT_TEST_FAIL,
-  EVENT_TEST_PASS,
-} = Mocha.Runner.constants;
+const { EVENT_RUN_END, EVENT_TEST_FAIL, EVENT_TEST_PASS } =
+  Mocha.Runner.constants;
 const { titleToCaseIds, logger } = require("./utils");
 // const getenv = require("getenv");
 
@@ -37,7 +34,7 @@ async function done(results, testrail, options, failures, exit) {
 
 function getReporterOptions(reporterOptions) {
   return {
-    ...reporterOptions,
+    ...reporterOptions
   };
 }
 
@@ -70,14 +67,18 @@ function testrailReporter(runner, options) {
 
   let endCalled = false;
 
-  runner.on(EVENT_TEST_PASS, (test) => {
+  runner.on(EVENT_TEST_PASS, test => {
     const caseIds = titleToCaseIds(test.title);
     if (caseIds.length > 0) {
-      const results = caseIds.map((caseId) => {
+      const results = caseIds.map(caseId => {
         return {
           case_id: caseId,
           status_id: 1,
           comment: `Execution time: ${test.duration}ms`,
+          duration: test.duration,
+          version: process.env.TESTRAIL_RESULT_VERSION
+            ? process.env.TESTRAIL_RESULT_VERSION
+            : "n/a"
         };
       });
       this.results.push(...results);
@@ -88,14 +89,18 @@ function testrailReporter(runner, options) {
     }
   });
 
-  runner.on(EVENT_TEST_FAIL, (test) => {
+  runner.on(EVENT_TEST_FAIL, test => {
     const caseIds = titleToCaseIds(test.title);
     if (caseIds.length > 0) {
-      const results = caseIds.map((caseId) => {
+      const results = caseIds.map(caseId => {
         return {
           case_id: caseId,
           status_id: 5,
           comment: `${test.err.message}`,
+          duration: test.duration,
+          version: process.env.TESTRAIL_RESULT_VERSION
+            ? process.env.TESTRAIL_RESULT_VERSION
+            : "n/a"
         };
       });
       this.results.push(...results);

@@ -13,17 +13,17 @@ function addCiInfo(opts) {
   ) {
     reporterOptions = {
       ...reporterOptions,
-      runName: `${reporterOptions.runName} | #${process.env.CIRCLE_BUILD_NUM}`,
+      runName: `${reporterOptions.runName} | #${process.env.CIRCLE_BUILD_NUM}`
     };
   } else if (reporterOptions.ci === "travis") {
     reporterOptions = {
       ...reporterOptions,
-      runName: `${reporterOptions.runName} | #${process.env.TRAVIS_BUILD_NUMBER}`,
+      runName: `${reporterOptions.runName} | #${process.env.TRAVIS_BUILD_NUMBER}`
     };
   } else if (reporterOptions.ci === "jenkins") {
     reporterOptions = {
       ...reporterOptions,
-      runName: `${reporterOptions.runName} | #${process.env.BUILD_NUMBER}`,
+      runName: `${reporterOptions.runName} | #${process.env.BUILD_NUMBER}`
     };
   }
   return reporterOptions;
@@ -69,12 +69,12 @@ function checkOpts(opts) {
     createRun:
       opts.createRun !== undefined
         ? opts.createRun
-        : getenv("TESTRAIL_CREATE_RUN", false, "n/a"),
+        : getenv("TESTRAIL_CREATE_RUN", false),
     suiteIds:
       opts.suiteIds !== undefined
         ? suiteIds
         : getenv("TESTRAIL_SUITE_IDS", "n/a"),
-    ci: opts.ci !== undefined ? opts.ci : getenv("TESTRAIL_CI", "n/a"),
+    ci: opts.ci !== undefined ? opts.ci : getenv("TESTRAIL_CI", "n/a")
   };
 }
 
@@ -103,7 +103,7 @@ class TestrailClass {
     this.testrail = new Testrail({
       host: `https://${this.domain}`,
       user: this.username,
-      password: this.password,
+      password: this.password
     });
   }
 
@@ -149,8 +149,8 @@ class TestrailClass {
       milestone_id: this.milestone_id,
       entries: [
         { suite_id: 24, name: "[#ccid] - test suite config" },
-        { suite_id: 25, name: "[#ccid] - test suite - user" },
-      ],
+        { suite_id: 25, name: "[#ccid] - test suite - user" }
+      ]
     });
   }
 
@@ -161,7 +161,7 @@ class TestrailClass {
         const caseResponse = await this.testrail.getCase(caseId);
         const tcSuiteId = _.get(caseResponse.body, "suite_id");
         const planRunId = _.chain(
-          _.find(planResponse.body.entries, (e) => e.suite_id === tcSuiteId)
+          _.find(planResponse.body.entries, e => e.suite_id === tcSuiteId)
         )
           .get("runs")
           .head()
@@ -195,12 +195,12 @@ class TestrailClass {
     let createBody = {
       name: `${this.runName} | ${moment().format("YYYY MMM DD, HH:MM:SS")}`,
       suite_id: this.suiteId,
-      include_all: true,
+      include_all: true
     };
     if (this.milestoneId !== "n/a" && this.milestoneId !== 0) {
       createBody = {
         ...createBody,
-        milestone_id: this.milestoneId,
+        milestone_id: this.milestoneId
       };
     }
     try {
