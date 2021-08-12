@@ -3,7 +3,30 @@ const Mocha = require("mocha");
 const { EVENT_RUN_END, EVENT_TEST_FAIL, EVENT_TEST_PASS } =
   Mocha.Runner.constants;
 const { titleToCaseIds, logger } = require("./utils");
-// const getenv = require("getenv");
+
+require("dotenv").config();
+
+function getResultBody(test, caseId) {
+  let comment = `Duration: ${test.duration}ms`;
+  if (process.env.TESTRAIL_CI) {
+    comment = `
+      ${comment}
+      Circle build URL - ${process.env.CIRCLE_BUILD_URL}
+      Circle Branch - ${process.env.CIRCLE_BRANCH}
+      Author - ${process.env.CIRCLE_USERNAME}
+      Github - ${process.env.CI_PULL_REQUEST}
+    `;
+  }
+  return {
+    case_id: caseId,
+    status_id: test.state === "passed" ? 1 : 5,
+    comment,
+    elapsed: test.duration,
+    version: process.env.TESTRAIL_RESULT_VERSION
+      ? process.env.TESTRAIL_RESULT_VERSION
+      : "n/a"
+  };
+}
 
 function consoleReporter(reporter) {
   if (reporter) {
@@ -71,15 +94,7 @@ function testrailReporter(runner, options) {
     const caseIds = titleToCaseIds(test.title);
     if (caseIds.length > 0) {
       const results = caseIds.map(caseId => {
-        return {
-          case_id: caseId,
-          status_id: 1,
-          comment: `Execution time: ${test.duration}ms`,
-          elapsed: test.duration,
-          version: process.env.TESTRAIL_RESULT_VERSION
-            ? process.env.TESTRAIL_RESULT_VERSION
-            : "n/a"
-        };
+        return getResultBody(test, caseId);
       });
       this.results.push(...results);
     } else {
@@ -93,15 +108,7 @@ function testrailReporter(runner, options) {
     const caseIds = titleToCaseIds(test.title);
     if (caseIds.length > 0) {
       const results = caseIds.map(caseId => {
-        return {
-          case_id: caseId,
-          status_id: 5,
-          comment: `${test.err.message}`,
-          duration: test.duration,
-          version: process.env.TESTRAIL_RESULT_VERSION
-            ? process.env.TESTRAIL_RESULT_VERSION
-            : "n/a"
-        };
+        return getResultBody(test, caseId);
       });
       this.results.push(...results);
     } else {
