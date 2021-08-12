@@ -75,7 +75,7 @@ function testrailReporter(runner, options) {
           case_id: caseId,
           status_id: 1,
           comment: `Execution time: ${test.duration}ms`,
-          duration: test.duration,
+          elapsed: test.duration,
           version: process.env.TESTRAIL_RESULT_VERSION
             ? process.env.TESTRAIL_RESULT_VERSION
             : "n/a"
