@@ -1,6 +1,6 @@
 {
   "name": "testrail-mocha-reporter",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "Testrail reporter for Mocha.js",
   "scripts": {
     "lint": "eslint src test",

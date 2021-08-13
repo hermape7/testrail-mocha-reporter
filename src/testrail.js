@@ -228,17 +228,18 @@ class TestrailClass {
   async addResults(runId, results) {
     try {
       logger(`Adding results to run with id ${runId}`);
-      console.log(results);
       await this.testrail.addResultsForCases(runId, results ? results : {});
       logger(
         `Results published to https://${this.domain}/index.php?/runs/view/${runId}`
       );
     } catch (err) {
-      console.log(this);
+      logger(
+        `
+        Adding results failed with err
+        ${err}
+        `
+      );
       throw new Error(`${err}`);
-      // logger(
-      //   `Run with ID ${runId} is not valid run. (Run needs to be created and not closed)`
-      // );
     }
   }
 
