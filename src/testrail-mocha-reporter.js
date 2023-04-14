@@ -8,7 +8,7 @@ const getenv = require("getenv");
 require("dotenv").config();
 
 function getResultBody(test, caseId) {
-  let comment = `Duration: ${test.duration}ms`;
+  let comment = `Execution duration: ${test.duration}ms`;
   if (getenv.bool("CIRCLECI", false)) {
     comment = `
       ${comment}
@@ -22,7 +22,7 @@ function getResultBody(test, caseId) {
     case_id: caseId,
     status_id: test.state === "passed" ? 1 : 5,
     comment,
-    elapsed: test.duration,
+    elapsed: test.duration / 1000 + "s",
     version: getenv("TESTRAIL_RESULT_VERSION", "n/a")
   };
 }
